@@ -1,0 +1,3 @@
+ADMIN-001|Clinic Admin|admin123|ADMIN
+2024-12446|Jan Ezekiel Villamor|1234|STUDENT
+2024-14463|Julyen Velasco|123|STUDENT

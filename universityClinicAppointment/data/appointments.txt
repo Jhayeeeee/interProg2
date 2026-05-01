@@ -1,0 +1,3 @@
+738086|2024-12446|Jan Ezekiel Villamor|2026-05-02|Sakit ipin|Done|Dr. Kwakkwak|N/A
+462032|2024-14463|Julyen Velasco|2026-05-01|asdsad|Pending|N/A|Fever: Yes, Cough: Yes, Meds: Yes, Dur: 1-3 days
+495355|2024-12446|Jan Ezekiel Villamor|2026-05-01|sdsad|Pending|N/A|Fever: Yes, Cough: Yes, Meds: Yes, Dur: Less than 24 hours
