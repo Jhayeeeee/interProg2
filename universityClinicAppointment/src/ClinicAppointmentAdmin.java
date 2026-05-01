@@ -29,6 +29,7 @@ public class ClinicAppointmentAdmin extends JFrame {
 
     private DefaultTableModel studentTableModel;
     private DefaultTableModel historyTableModel;
+    private DefaultTableModel approvedTableModel;
     private JTextField studentSearchField;
 
     public ClinicAppointmentAdmin(DatabaseManager.User user) {
@@ -55,9 +56,10 @@ public class ClinicAppointmentAdmin extends JFrame {
         navMenu.add(logoLabel, "wrap 40");
 
         JButton btnAppt = createSideButton("\uD83D\uDCC5  Daily Appointments", true);
+        JButton btnApproved = createSideButton("\u2705  Approved List", false);
         JButton btnHistory = createSideButton("\uD83D\uDCDC  History Activity", false);
         JButton btnStud = createSideButton("\uD83D\uDC64  Manage Accounts", false);
-        navMenu.add(btnAppt); navMenu.add(btnHistory); navMenu.add(btnStud);
+        navMenu.add(btnAppt); navMenu.add(btnApproved); navMenu.add(btnHistory); navMenu.add(btnStud);
         sidebar.add(navMenu, BorderLayout.NORTH);
 
         JPanel navFooter = new JPanel(new MigLayout("insets 20, wrap 1", "[fill]", "push[]"));
@@ -77,13 +79,15 @@ public class ClinicAppointmentAdmin extends JFrame {
         contentPanel = new JPanel(cardLayout);
         contentPanel.setOpaque(false);
         contentPanel.add(createAppointmentsView(), "APPT");
+        contentPanel.add(createApprovedView(), "APPROVED");
         contentPanel.add(createHistoryView(), "HISTORY");
         contentPanel.add(createStudentManagementView(), "STUDENT");
         root.add(contentPanel, BorderLayout.CENTER);
 
-        btnAppt.addActionListener(e -> { cardLayout.show(contentPanel, "APPT"); resetSideButtons(btnAppt, btnHistory, btnStud); refreshAppointmentTable(); });
-        btnHistory.addActionListener(e -> { cardLayout.show(contentPanel, "HISTORY"); resetSideButtons(btnHistory, btnAppt, btnStud); refreshHistoryTable(); });
-        btnStud.addActionListener(e -> { cardLayout.show(contentPanel, "STUDENT"); resetSideButtons(btnStud, btnAppt, btnHistory); refreshStudentTable(""); });
+        btnAppt.addActionListener(e -> { cardLayout.show(contentPanel, "APPT"); resetSideButtons(btnAppt, btnApproved, btnHistory, btnStud); refreshAppointmentTable(); });
+        btnApproved.addActionListener(e -> { cardLayout.show(contentPanel, "APPROVED"); resetSideButtons(btnApproved, btnAppt, btnHistory, btnStud); refreshApprovedTable(); });
+        btnHistory.addActionListener(e -> { cardLayout.show(contentPanel, "HISTORY"); resetSideButtons(btnHistory, btnAppt, btnApproved, btnStud); refreshHistoryTable(); });
+        btnStud.addActionListener(e -> { cardLayout.show(contentPanel, "STUDENT"); resetSideButtons(btnStud, btnAppt, btnApproved, btnHistory); refreshStudentTable(""); });
     }
 
     private JPanel createAppointmentsView() {
@@ -146,7 +150,7 @@ public class ClinicAppointmentAdmin extends JFrame {
         appointmentTableModel = new DefaultTableModel(columns, 0) { @Override public boolean isCellEditable(int row, int col) { return col == 4; } };
         JTable table = new JTable(appointmentTableModel); styleTable(table);
         table.getTableHeader().setReorderingAllowed(false);
-        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Pending", "Done"});
+        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Pending", "Approved", "Done"});
         table.getColumnModel().getColumn(4).setCellEditor(new DefaultCellEditor(statusCombo));
         appointmentTableModel.addTableModelListener(e -> {
             if (e.getType() == javax.swing.event.TableModelEvent.UPDATE && e.getColumn() == 4) {
@@ -162,6 +166,54 @@ public class ClinicAppointmentAdmin extends JFrame {
         panel.add(new JScrollPane(table), "grow");
         refreshAppointmentTable();
         return panel;
+    }
+
+    private JPanel createApprovedView() {
+        JPanel panel = new JPanel(new MigLayout("fill, insets 20"));
+        panel.setOpaque(false);
+        JLabel title = new JLabel("Approved Appointments List");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        panel.add(title, "wrap 15");
+
+        String[] columns = {"ID", "Student", "Date", "Concern", "Status"};
+        approvedTableModel = new DefaultTableModel(columns, 0) { @Override public boolean isCellEditable(int row, int col) { return col == 4; } };
+        JTable table = new JTable(approvedTableModel); styleTable(table);
+        table.getTableHeader().setReorderingAllowed(false);
+        
+        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"Approved", "Done"});
+        table.getColumnModel().getColumn(4).setCellEditor(new DefaultCellEditor(statusCombo));
+        
+        approvedTableModel.addTableModelListener(e -> {
+            if (e.getType() == javax.swing.event.TableModelEvent.UPDATE && e.getColumn() == 4) {
+                int id = (int) approvedTableModel.getValueAt(e.getFirstRow(), 0);
+                String st = (String) approvedTableModel.getValueAt(e.getFirstRow(), 4);
+                if ("Done".equals(st)) {
+                    String d = JOptionPane.showInputDialog(this, "Enter Dentist in charge:");
+                    if (d != null && !d.trim().isEmpty()) DatabaseManager.updateAppointmentStatusWithDentist(id, st, d);
+                } else DatabaseManager.updateAppointmentStatus(id, st);
+                SwingUtilities.invokeLater(() -> refreshApprovedTable());
+            }
+        });
+
+        panel.add(new JScrollPane(table), "grow");
+        return panel;
+    }
+
+    private void refreshApprovedTable() {
+        if (approvedTableModel == null) return;
+        approvedTableModel.setRowCount(0);
+        // We'll read all appointments and filter by "Approved"
+        try (BufferedReader br = new BufferedReader(new FileReader("data/appointments.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split("\\|");
+                if (parts.length >= 6 && "Approved".equalsIgnoreCase(parts[5])) {
+                    try {
+                        approvedTableModel.addRow(new Object[]{Integer.parseInt(parts[0]), parts[2], parts[3], parts[4], parts[5]});
+                    } catch (NumberFormatException nfe) {}
+                }
+            }
+        } catch (IOException e) { e.printStackTrace(); }
     }
 
     private JPanel createHistoryView() {
@@ -316,6 +368,7 @@ public class ClinicAppointmentAdmin extends JFrame {
                 } else if (col == table.getColumnCount()-1 && value != null) {
                     String status = value.toString();
                     if (status.equalsIgnoreCase("Done")) { c.setForeground(new Color(40, 167, 69)); setFont(getFont().deriveFont(Font.BOLD)); }
+                    else if (status.equalsIgnoreCase("Approved")) { c.setForeground(AppColors.APPROVED); setFont(getFont().deriveFont(Font.BOLD)); }
                     else if (status.equalsIgnoreCase("Pending")) { c.setForeground(new Color(255, 165, 0)); setFont(getFont().deriveFont(Font.BOLD)); }
                 } else { c.setForeground(AppColors.TEXT_MAIN); setFont(getFont().deriveFont(Font.PLAIN)); }
                 if (!isSelected) c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(252, 253, 255));

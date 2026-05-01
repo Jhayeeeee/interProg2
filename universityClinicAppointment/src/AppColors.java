@@ -11,6 +11,7 @@ public class AppColors {
     public static final Color SUCCESS    = new Color(40, 167, 69);
     public static final Color DANGER     = new Color(220, 53, 69);
     public static final Color INFO       = new Color(23, 162, 184);
+    public static final Color APPROVED   = new Color(0, 123, 255); // Blue for Approved
     
     // Text Colors
     public static final Color TEXT_MAIN  = new Color(33, 37, 41);

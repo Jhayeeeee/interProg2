@@ -28,6 +28,7 @@ public class ClinicAppointmentDashboard extends JFrame {
     private JLabel timeLabel, doctorLabel, slotsLabel;
     private JCheckBox feverCb, coughCb, medsCb;
     private JComboBox<String> durationCombo;
+    private JLabel notificationLabel;
 
     public ClinicAppointmentDashboard(DatabaseManager.User user) {
         this.currentUser = user;
@@ -152,6 +153,17 @@ public class ClinicAppointmentDashboard extends JFrame {
         mainContent.add(bookingPanel, "growy");
 
         JPanel historyPanel = createCardPanel("My Appointments History");
+        
+        // Notification Area
+        notificationLabel = new JLabel("");
+        notificationLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        notificationLabel.setOpaque(true);
+        notificationLabel.setBackground(new Color(230, 242, 255));
+        notificationLabel.setForeground(AppColors.APPROVED);
+        notificationLabel.setBorder(new EmptyBorder(10, 15, 10, 15));
+        notificationLabel.setVisible(false);
+        historyPanel.add(notificationLabel, "growx, h 40!, wrap 10");
+
         String[] cols = {"Date", "Concern", "Status", "Action", "ID"};
         tableModel = new DefaultTableModel(cols, 0) { @Override public boolean isCellEditable(int r, int c) { return false; } };
         appointmentTable = new JTable(tableModel); styleTable(); appointmentTable.getTableHeader().setReorderingAllowed(false);
@@ -282,9 +294,23 @@ public class ClinicAppointmentDashboard extends JFrame {
     private void refreshTable() {
         tableModel.setRowCount(0);
         List<DatabaseManager.Appointment> list = DatabaseManager.getStudentAppointments(currentUser.studentID);
+        boolean hasApproved = false;
+        String approvedDate = "";
+        
         for (DatabaseManager.Appointment a : list) {
             String actionText = "Pending".equalsIgnoreCase(a.status) ? "Manage \u2699\uFE0F" : "--";
             tableModel.addRow(new Object[]{a.date, a.concern, a.status, actionText, a.id});
+            if ("Approved".equalsIgnoreCase(a.status)) {
+                hasApproved = true;
+                approvedDate = a.date;
+            }
+        }
+        
+        if (hasApproved) {
+            notificationLabel.setText("\u2705 Your appointment for " + approvedDate + " has been APPROVED!");
+            notificationLabel.setVisible(true);
+        } else {
+            notificationLabel.setVisible(false);
         }
     }
 
@@ -334,6 +360,7 @@ public class ClinicAppointmentDashboard extends JFrame {
                 if (col == 2 && value != null) {
                     String status = value.toString();
                     if (status.equalsIgnoreCase("Done")) { c.setForeground(new Color(40, 167, 69)); setFont(getFont().deriveFont(Font.BOLD)); }
+                    else if (status.equalsIgnoreCase("Approved")) { c.setForeground(AppColors.APPROVED); setFont(getFont().deriveFont(Font.BOLD)); }
                     else if (status.equalsIgnoreCase("Pending")) { c.setForeground(new Color(255, 165, 0)); setFont(getFont().deriveFont(Font.BOLD)); }
                 } else if (col == 3 && "Manage \u2699\uFE0F".equals(value)) { c.setForeground(AppColors.ACCENT); setFont(getFont().deriveFont(Font.BOLD)); }
                 else { c.setForeground(AppColors.TEXT_MAIN); }
